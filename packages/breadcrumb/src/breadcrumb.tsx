@@ -24,76 +24,63 @@
 * IN THE SOFTWARE.
 */
 
-import { defineComponent, ExtractPropTypes, getCurrentInstance, inject } from 'vue';
+import { defineComponent, ExtractPropTypes, getCurrentInstance, onMounted, provide } from 'vue';
 
 import { usePrefix } from '@bkui-vue/config-provider';
+import { ArrowsLeft } from '@bkui-vue/icon';
 import { classes, PropTypes } from '@bkui-vue/shared';
 
 import { IBreadcrumbProps } from './props';
 
-export const breadcrumbItemType = {
+export const breadcrumbType = {
   extCls: PropTypes.string,
-  to: PropTypes.oneOfType([PropTypes.string, PropTypes.object]).def(''),
+  separator: PropTypes.string.def('/'),
+  separatorClass: PropTypes.string,
   replace: PropTypes.bool,
+  backRouter: PropTypes.oneOfType([PropTypes.string, PropTypes.object]).def(''),
 };
 
-export type BreadcrumbItemType = ExtractPropTypes<typeof breadcrumbItemType>;
-
-export const enum EVENTS {
-  CLICK = 'click',
-}
-
-function CompositionEventFunction(evt: CompositionEvent) {
-  return evt;
-}
-
-const breadcrumbItemEmitEventsType = {
-  [EVENTS.CLICK]: CompositionEventFunction,
-};
+export type BreadcrumbType = ExtractPropTypes<typeof breadcrumbType>;
 
 
 export default defineComponent({
-  name: 'BreadcrumbItem',
-  props: breadcrumbItemType,
-  emits: breadcrumbItemEmitEventsType,
-  setup(props, { emit, slots }) {
+  name: 'Breadcrumb',
+  props: breadcrumbType,
+  setup(props, { slots }) {
     const { resolveClassName } = usePrefix();
-    const { appContext } = getCurrentInstance();
-    const parent = inject<IBreadcrumbProps>('breadcrumb');
-    const router = appContext.config.globalProperties.$router;
-    const handleClick = (e) => {
-      emit(EVENTS.CLICK, e);
-      const { to, replace } = props;
-      if (!to || !router) return;
-      replace ? router.replace(to) : router.push(to);
-    };
-    const classCtx = classes({ [resolveClassName('breadcrumb-item')]: true }, `${props.extCls || ''}`);
+    const { proxy, appContext } = getCurrentInstance();
 
-    const renderSeparator = () => {
-      if (slots.separator) {
-        return slots.separator();
+    provide<IBreadcrumbProps>('breadcrumb', props);
+    onMounted(() => {
+      const items = proxy.$el.querySelectorAll(resolveClassName('breadcrumb-item'));
+      if (items.length) {
+        items[items.length - 1].setAttribute('aria-current', 'page');
       }
-      if (parent.separatorClass) {
-        return <i class={`${resolveClassName('breadcrumb-separator')} ${parent.separatorClass}`} />;
-      }
-      if (parent.separator) {
-        return <span class={resolveClassName('breadcrumb-separator')} role="presentation">{parent?.separator}</span>;
-      }
-      return null;
-    };
+    });
+    const classCtx = classes({ [resolveClassName('breadcrumb')]: true }, `${props.extCls || ''}`);
 
+    const goBack = () => {
+      const { backRouter, replace } = props;
+      const { $router } = appContext.config.globalProperties;
+      if (!$router) return;
+      replace ? $router.replace(backRouter) : $router.push(backRouter);
+    };
     return () => (
-      <span class={classCtx}>
-        <span
-          ref="link"
-          class={`${resolveClassName('breadcrumb-item-inner')} ${props.to ? 'is-link' : ''}`}
-          role="link"
-          onClick={handleClick}
-        >
-          {slots.default?.()}
-        </span>
-        {renderSeparator()}
-      </span>
+      <div class={classCtx} aria-label="Breadcrumb" role="navigation">
+        {
+          !slots.prefix && props.backRouter
+            ? <div class={resolveClassName('breadcrumb-goback')}>
+                <ArrowsLeft onClick={goBack}></ArrowsLeft>
+              </div>
+            : ''
+        }
+        {
+          slots.prefix
+            ? <div class={resolveClassName('breadcrumb-goback')}>{slots.prefix()}</div>
+            : ''
+        }
+        {slots.default?.()}
+      </div>
     );
   },
 });
