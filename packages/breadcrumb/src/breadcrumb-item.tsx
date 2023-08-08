@@ -24,18 +24,19 @@
 * IN THE SOFTWARE.
 */
 
-import { defineComponent, ExtractPropTypes, getCurrentInstance, inject } from 'vue';
+import { defineComponent, getCurrentInstance, inject, ExtractPropTypes } from 'vue';
 
-import { usePrefix } from '@bkui-vue/config-provider';
 import { classes, PropTypes } from '@bkui-vue/shared';
 
 import { IBreadcrumbProps } from './props';
+
+import { usePrefix } from '@bkui-vue/config-provider';
 
 export const breadcrumbItemType = {
   extCls: PropTypes.string,
   to: PropTypes.oneOfType([PropTypes.string, PropTypes.object]).def(''),
   replace: PropTypes.bool,
-};
+}
 
 export type BreadcrumbItemType = ExtractPropTypes<typeof breadcrumbItemType>;
 
